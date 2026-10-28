@@ -1,0 +1,67 @@
+# Python / FastAPI backend
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+.env.*
+backend/.env
+backend/__pycache__/
+backend/app/__pycache__/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+uploads/
+*.log
+
+# Next.js / Node
+web/node_modules/
+web/.next/
+web/out/
+web/.env
+web/.env.local
+web/.env.production
+web/.env.development
+node_modules/
+.npm/
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/.pub-cache/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/key.properties
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/App.framework
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/app.flx
+mobile/ios/Flutter/app.zip
+mobile/ios/Flutter/flutter_assets/
+mobile/ios/ServiceDefinitions.json
+*.iml
+
+# Firebase (these are secret — add per-device)
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
+
+# IDE
+.idea/
+.vscode/
+*.suo
+*.user
+*.swp
+.DS_Store
+Thumbs.db
+
+# OS
+*.lock
+!pubspec.lock
