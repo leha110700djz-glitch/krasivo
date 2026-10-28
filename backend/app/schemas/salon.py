@@ -1,12 +1,12 @@
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 from typing import Optional, List
 from datetime import datetime
 import uuid
 
 
 class SalonBase(BaseModel):
-    name: str
-    description: Optional[str] = None
+    name: str = Field(..., max_length=200, strip_whitespace=True)
+    description: Optional[str] = Field(None, max_length=2000)
     address: str
     city: str
     phone: str
@@ -22,8 +22,8 @@ class SalonCreate(SalonBase):
 
 
 class SalonUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name: Optional[str] = Field(None, max_length=200, strip_whitespace=True)
+    description: Optional[str] = Field(None, max_length=2000)
     address: Optional[str] = None
     city: Optional[str] = None
     phone: Optional[str] = None

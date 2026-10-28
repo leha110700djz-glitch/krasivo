@@ -11,6 +11,7 @@ from app.models.user import User
 from app.schemas.review import ReviewOut, ReviewCreate, ReviewDetail
 from app.deps import get_current_active_user
 from app.services.salon import recalculate_salon_rating, recalculate_master_rating
+from app.services.loyalty import credit_points
 
 router = APIRouter(prefix="/reviews", tags=["Reviews"])
 
@@ -76,6 +77,12 @@ async def create_review(
     await recalculate_salon_rating(db, booking.salon_id)
     if booking.master_id:
         await recalculate_master_rating(db, booking.master_id)
+
+    # Award 50 bonus points for 5-star reviews
+    if body.rating == 5:
+        await credit_points(db, current_user.id, 50, "review_5star", booking_id=body.booking_id)
+    elif body.rating >= 4:
+        await credit_points(db, current_user.id, 20, "review_positive", booking_id=body.booking_id)
 
     await db.refresh(review)
     return ReviewOut.model_validate(review)

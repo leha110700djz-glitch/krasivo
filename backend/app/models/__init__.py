@@ -8,6 +8,8 @@ from app.models.notification import Notification
 from app.models.schedule import MasterSchedule
 from app.models.portfolio import Portfolio
 from app.models.promo import Promo, PromoUsage, DiscountType
+from app.models.loyalty import LoyaltyAccount, LoyaltyTransaction
+from app.models.revoked_token import RevokedToken
 
 __all__ = [
     "User", "UserRole",
@@ -20,4 +22,6 @@ __all__ = [
     "MasterSchedule",
     "Portfolio",
     "Promo", "PromoUsage", "DiscountType",
+    "LoyaltyAccount", "LoyaltyTransaction",
+    "RevokedToken",
 ]

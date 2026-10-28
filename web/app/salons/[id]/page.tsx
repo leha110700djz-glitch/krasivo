@@ -21,6 +21,7 @@ import { useSalonMasters } from '@/hooks/useMaster'
 import { getImageUrl } from '@/lib/api'
 import { formatPrice, formatDuration } from '@/lib/utils'
 import BookingFlow from '@/components/booking/BookingFlow'
+import SalonJsonLd from '@/components/seo/SalonJsonLd'
 
 export default function SalonPage() {
   const { id } = useParams<{ id: string }>()
@@ -63,6 +64,7 @@ export default function SalonPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SalonJsonLd salon={salon} />
       <Header />
 
       <main className="flex-1 bg-gray-50">

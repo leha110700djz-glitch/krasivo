@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timedelta, time
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, desc
 from sqlalchemy.orm import selectinload
@@ -16,6 +16,8 @@ from app.schemas.booking import BookingOut, BookingCreate, BookingDetail, Cancel
 from app.deps import get_current_active_user
 from app.services.booking import check_slot_available
 from app.services.notification import send_booking_notification
+from app.services.loyalty import credit_points
+from app.limiter import limiter, get_user_key
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -44,7 +46,9 @@ async def list_bookings(
 
 
 @router.post("", response_model=BookingOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/minute", key_func=get_user_key)
 async def create_booking(
+    request: Request,
     body: BookingCreate,
     current_user: User = Depends(get_current_active_user),
     db: AsyncSession = Depends(get_db),
@@ -63,10 +67,10 @@ async def create_booking(
 
     end_time = add_minutes_to_time(body.start_time, service.duration_minutes)
 
-    # Check availability
+    # Check availability — raises 409 if master already has a booking in this slot
     available = await check_slot_available(db, body.master_id, body.date, body.start_time, end_time)
     if not available:
-        raise HTTPException(status_code=409, detail="This time slot is not available")
+        raise HTTPException(status_code=409, detail="Это время уже занято, выберите другой слот")
 
     booking = Booking(
         client_id=current_user.id,
@@ -215,5 +219,6 @@ async def complete_booking(
     booking.status = BookingStatus.completed
     await db.flush()
     await send_booking_notification(db, booking, booking.client_id, "booking_completed")
+    await credit_points(db, booking.client_id, 20, "booking_completed", booking_id=booking.id)
     await db.refresh(booking)
     return BookingOut.model_validate(booking)

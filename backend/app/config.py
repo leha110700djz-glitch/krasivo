@@ -12,8 +12,10 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     UPLOAD_DIR: str = "/app/uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
-    CORS_ORIGINS: str = '["*"]'
+    CORS_ORIGINS: str = '["http://localhost:3000", "http://localhost:8000", "https://krasivo.ru"]'
     DEBUG: bool = True
+    FCM_SERVER_KEY: str = ""
+    FCM_PROJECT_ID: str = ""
 
     def get_cors_origins(self) -> List[str]:
         try:

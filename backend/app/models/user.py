@@ -35,3 +35,4 @@ class User(Base):
     reviews = relationship("Review", back_populates="client")
     notifications = relationship("Notification", back_populates="user")
     master_profile = relationship("Master", back_populates="user", uselist=False, foreign_keys="Master.user_id")
+    loyalty_account = relationship("LoyaltyAccount", back_populates="user", uselist=False)

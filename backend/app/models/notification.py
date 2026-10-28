@@ -17,6 +17,8 @@ class Notification(Base):
     data: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False, server_default="{}")
     is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    push_delivered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
 
     # Relationships
     user = relationship("User", back_populates="notifications")

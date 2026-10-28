@@ -13,5 +13,7 @@ class NotificationOut(BaseModel):
     data: Dict[str, Any] = {}
     is_read: bool
     created_at: datetime
+    sent_at: Optional[datetime] = None
+    push_delivered: bool = False
 
     model_config = {"from_attributes": True}

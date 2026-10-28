@@ -1,22 +1,27 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from datetime import datetime, timezone, timedelta
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import aiofiles
 
 from app.database import get_db
 from app.models.user import User, UserRole
+from app.models.loyalty import LoyaltyAccount, LoyaltyTransaction
+from app.models.revoked_token import RevokedToken
 from app.schemas.user import UserCreate, UserLogin, TokenResponse, RefreshRequest, UserOut, UserUpdate, UploadAvatarResponse
 from app.services.auth import hash_password, verify_password, create_access_token, create_refresh_token, verify_refresh_token
 from app.deps import get_current_active_user
 from app.config import settings
+from app.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, body: UserCreate, db: AsyncSession = Depends(get_db)):
     # Check if phone already exists
     result = await db.execute(select(User).where(User.phone == body.phone))
     existing = result.scalar_one_or_none()
@@ -33,6 +38,25 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.flush()
     await db.refresh(user)
 
+    # Create loyalty account with welcome bonus
+    loyalty_account = LoyaltyAccount(
+        user_id=user.id,
+        points=100,
+        lifetime_points=100,
+    )
+    db.add(loyalty_account)
+    await db.flush()
+    await db.refresh(loyalty_account)
+
+    welcome_tx = LoyaltyTransaction(
+        account_id=loyalty_account.id,
+        points=100,
+        reason="welcome_bonus",
+        description="Приветственный бонус за регистрацию",
+    )
+    db.add(welcome_tx)
+    await db.flush()
+
     token_data = {"sub": str(user.id), "role": user.role.value}
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
@@ -45,7 +69,8 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: UserLogin, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, body: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.phone == body.phone))
     user = result.scalar_one_or_none()
 
@@ -72,6 +97,15 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
+    # Check blacklist
+    jti = payload.get("jti")
+    if jti:
+        revoked_result = await db.execute(
+            select(RevokedToken).where(RevokedToken.jti == jti)
+        )
+        if revoked_result.scalar_one_or_none():
+            raise HTTPException(status_code=401, detail="Token has been revoked")
+
     user_id = payload.get("sub")
     result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
     user = result.scalar_one_or_none()
@@ -88,6 +122,41 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
         refresh_token=new_refresh_token,
         user=UserOut.model_validate(user),
     )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(
+    body: RefreshRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Blacklist the provided refresh token so it cannot be used again."""
+    payload = verify_refresh_token(body.refresh_token)
+    if not payload:
+        # Token already invalid; treat as successful logout
+        return
+
+    jti = payload.get("jti")
+    if not jti:
+        return
+
+    # Avoid duplicate inserts
+    existing = await db.execute(select(RevokedToken).where(RevokedToken.jti == jti))
+    if existing.scalar_one_or_none():
+        return
+
+    exp_timestamp = payload.get("exp")
+    if exp_timestamp:
+        expires_at = datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+    else:
+        expires_at = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+
+    revoked = RevokedToken(
+        jti=jti,
+        expires_at=expires_at,
+    )
+    db.add(revoked)
+    await db.flush()
 
 
 @router.get("/me", response_model=UserOut)

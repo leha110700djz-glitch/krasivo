@@ -3,7 +3,8 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Calendar, Clock, Settings, User } from 'lucide-react'
+import { Calendar, Clock, Settings, User, Star } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import Header from '@/components/layout/Header'
 import Footer from '@/components/layout/Footer'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs'
@@ -12,12 +13,40 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useAuth } from '@/hooks/useAuth'
 import { useBookings, useUpdateBookingStatus } from '@/hooks/useBookings'
 import { getImageUrl } from '@/lib/api'
+import { useAuthStore } from '@/store/auth'
+import api from '@/lib/api'
+
+interface LoyaltySummary {
+  points: number
+  level: 'bronze' | 'silver' | 'gold' | 'platinum'
+}
+
+const LEVEL_LABELS: Record<string, string> = {
+  bronze: 'Бронза',
+  silver: 'Серебро',
+  gold: 'Золото',
+  platinum: 'Платина',
+}
+
+const LEVEL_COLORS: Record<string, string> = {
+  bronze: 'text-amber-700 bg-amber-50 border-amber-200',
+  silver: 'text-gray-600 bg-gray-50 border-gray-300',
+  gold: 'text-yellow-700 bg-yellow-50 border-yellow-300',
+  platinum: 'text-purple-700 bg-purple-50 border-purple-300',
+}
 
 export default function ProfilePage() {
   const { user, isAuthenticated } = useAuth()
+  const token = useAuthStore((s) => s.token)
   const router = useRouter()
   const { data: bookings, isLoading } = useBookings()
   const updateStatus = useUpdateBookingStatus()
+
+  const { data: loyalty } = useQuery<LoyaltySummary>({
+    queryKey: ['loyalty', 'me'],
+    queryFn: () => api.get<LoyaltySummary>('/loyalty/me', token!),
+    enabled: !!token,
+  })
 
   useEffect(() => {
     if (!isAuthenticated) router.push('/login')
@@ -85,6 +114,24 @@ export default function ProfilePage() {
                 <p className="text-xs text-gray-500">Завершённых</p>
               </div>
             </div>
+
+            {/* Loyalty card */}
+            {loyalty && (
+              <Link href="/profile/loyalty" className="block mt-4">
+                <div className={`flex items-center justify-between rounded-xl border px-4 py-3 hover:shadow-sm transition-shadow ${LEVEL_COLORS[loyalty.level] || 'bg-gray-50 border-gray-200 text-gray-700'}`}>
+                  <div className="flex items-center gap-2">
+                    <Star size={16} className="shrink-0" />
+                    <span className="text-sm font-medium">
+                      Мои баллы: <span className="font-bold">{loyalty.points.toLocaleString('ru-RU')}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold">{LEVEL_LABELS[loyalty.level]}</span>
+                    <span className="text-xs opacity-60">→</span>
+                  </div>
+                </div>
+              </Link>
+            )}
           </div>
 
           {/* Bookings */}
