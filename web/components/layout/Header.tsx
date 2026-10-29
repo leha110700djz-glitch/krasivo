@@ -45,6 +45,9 @@ export default function Header() {
             <Link href="/salons?category=barbershop" className="text-sm text-gray-600 hover:text-primary-700 font-medium transition-colors">
               Барбершопы
             </Link>
+            <Link href="/pricing" className="text-sm text-violet-700 hover:text-violet-800 font-semibold transition-colors">
+              Тарифы
+            </Link>
           </nav>
 
           {/* Auth area */}

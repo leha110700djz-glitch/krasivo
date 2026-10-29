@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, salons, masters, services, bookings, reviews, notifications, admin, dashboard, promos, loyalty
+from app.api.v1 import auth, salons, masters, services, bookings, reviews, notifications, admin, dashboard, promos, loyalty, certificates, blacklist, messages, campaigns, analytics, shifts
 
 router = APIRouter(prefix="/api/v1")
 router.include_router(auth.router)
@@ -13,3 +13,9 @@ router.include_router(notifications.router)
 router.include_router(admin.router)
 router.include_router(promos.router)
 router.include_router(loyalty.router)
+router.include_router(certificates.router)
+router.include_router(blacklist.router)
+router.include_router(messages.router)
+router.include_router(campaigns.router)
+router.include_router(analytics.router)
+router.include_router(shifts.router)

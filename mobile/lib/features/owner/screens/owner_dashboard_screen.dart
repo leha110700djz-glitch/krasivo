@@ -98,26 +98,51 @@ class OwnerDashboardScreen extends ConsumerWidget {
                 child: statsAsync.when(
                   loading: () => const LoadingWidget(),
                   error: (_, __) => const SizedBox.shrink(),
-                  data: (stats) => Row(
+                  data: (stats) => Column(
                     children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: AppStrings.todayBookings,
-                          value:
-                              '${stats['bookings_today'] ?? 0}',
-                          icon: Icons.calendar_today_rounded,
-                          color: primaryColor,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              label: AppStrings.todayBookings,
+                              value: '${stats['bookings_today'] ?? 0}',
+                              icon: Icons.calendar_today_rounded,
+                              color: primaryColor,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              label: AppStrings.monthRevenue,
+                              value:
+                                  '${(stats['revenue_month'] ?? 0).toStringAsFixed(0)} ₽',
+                              icon: Icons.payments_outlined,
+                              color: successColor,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          label: AppStrings.monthRevenue,
-                          value:
-                              '${(stats['revenue_month'] ?? 0).toStringAsFixed(0)} ₽',
-                          icon: Icons.payments_outlined,
-                          color: successColor,
-                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Клиентов за месяц',
+                              value: '${stats['clients_month'] ?? 0}',
+                              icon: Icons.group_outlined,
+                              color: const Color(0xFFD97706),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _StatCard(
+                              label: 'Рейтинг',
+                              value: '${(stats['avg_rating'] ?? 0.0).toStringAsFixed(1)} ★',
+                              icon: Icons.star_rounded,
+                              color: const Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -178,9 +203,21 @@ class OwnerDashboardScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        const Expanded(child: SizedBox()),
+                        Expanded(
+                          child: _QuickAction(
+                            label: 'Клиенты',
+                            icon: Icons.group_outlined,
+                            onTap: () {},
+                          ),
+                        ),
                         const SizedBox(width: 10),
-                        const Expanded(child: SizedBox()),
+                        Expanded(
+                          child: _QuickAction(
+                            label: 'Промокоды',
+                            icon: Icons.local_offer_outlined,
+                            onTap: () {},
+                          ),
+                        ),
                       ],
                     ),
                   ],

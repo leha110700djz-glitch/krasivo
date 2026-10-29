@@ -8,11 +8,17 @@ import {
   Users,
   Calendar,
   BarChart3,
+  BarChart2,
   Scissors,
   LogOut,
   Clock,
   UserCheck,
   Tag,
+  Gift,
+  ShieldOff,
+  MessageSquare,
+  Megaphone,
+  DollarSign,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -23,10 +29,16 @@ const navItems = [
   { href: '/dashboard/salon', icon: Store, label: 'Мой салон' },
   { href: '/dashboard/masters', icon: Users, label: 'Мастера' },
   { href: '/dashboard/schedule', icon: Clock, label: 'Расписание' },
+  { href: '/dashboard/salary', icon: DollarSign, label: 'Зарплаты' },
   { href: '/dashboard/bookings', icon: Calendar, label: 'Записи' },
   { href: '/dashboard/clients', icon: UserCheck, label: 'Клиенты' },
   { href: '/dashboard/stats', icon: BarChart3, label: 'Статистика' },
+  { href: '/dashboard/analytics', icon: BarChart2, label: 'Аналитика' },
   { href: '/dashboard/promos', icon: Tag, label: 'Промокоды' },
+  { href: '/dashboard/certificates', icon: Gift, label: 'Сертификаты' },
+  { href: '/dashboard/blacklist', icon: ShieldOff, label: 'Чёрный список' },
+  { href: '/dashboard/messages', icon: MessageSquare, label: 'Сообщения' },
+  { href: '/dashboard/campaigns', icon: Megaphone, label: 'Рассылки' },
 ]
 
 export default function DashboardSidebar() {

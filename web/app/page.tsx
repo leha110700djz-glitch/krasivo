@@ -110,8 +110,43 @@ const OWNER_FEATURES = [
   { icon: BarChart2, title: 'Аналитика и доходы', desc: 'Статистика по записям и выручке' },
   { icon: Bell, title: 'Уведомления клиентам', desc: 'Автоматические напоминания о записи' },
   { icon: Tag, title: 'Промокоды и акции', desc: 'Привлекайте новых клиентов скидками' },
-  { icon: TrendingUp, title: 'Рост клиентской базы', desc: 'Выход на тысячи новых клиентов' },
-  { icon: Shield, title: 'Безопасные платежи', desc: 'Прозрачный учёт всех транзакций' },
+  { icon: Gift, title: 'Подарочные сертификаты', desc: 'Продавайте онлайн, клиенты сами выкупают' },
+  { icon: TrendingUp, title: 'Расчёт зарплат', desc: 'Авто-расчёт по % или ставке за запись' },
+]
+
+const COMPETITIVE_ADVANTAGES = [
+  {
+    label: 'Нет комиссии',
+    desc: 'DIKIDI берёт % с записей через каталог. Мы — нет. Фиксированная подписка.',
+    highlight: '0%',
+    sub: 'комиссия с записей',
+    color: 'bg-green-50 border-green-200 text-green-800',
+    badge: 'bg-green-100 text-green-700',
+  },
+  {
+    label: 'Лояльность бесплатно',
+    desc: 'Уровни бронза → платина, кешбэк баллами — доступны на бесплатном тарифе.',
+    highlight: '4',
+    sub: 'уровня лояльности',
+    color: 'bg-amber-50 border-amber-200 text-amber-800',
+    badge: 'bg-amber-100 text-amber-700',
+  },
+  {
+    label: 'AI-время (скоро)',
+    desc: 'Система предложит мастеру оптимальные слоты без пробелов в расписании.',
+    highlight: 'AI',
+    sub: 'оптимизация',
+    color: 'bg-violet-50 border-violet-200 text-violet-800',
+    badge: 'bg-violet-100 text-violet-700',
+  },
+  {
+    label: 'Ваши данные — ваши',
+    desc: 'Выгружайте клиентскую базу в CSV в любой момент. Никаких ловушек.',
+    highlight: 'CSV',
+    sub: 'экспорт всегда',
+    color: 'bg-blue-50 border-blue-200 text-blue-800',
+    badge: 'bg-blue-100 text-blue-700',
+  },
 ]
 
 const PROMO_CODES = [
@@ -496,6 +531,38 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Competitive advantages */}
+      <section className="py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+              Почему лучше, чем DIKIDI и YCLIENTS
+            </h2>
+            <p className="text-gray-500 text-sm max-w-xl mx-auto">
+              Мы взяли лучшее у конкурентов и добавили то, чего у них нет
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {COMPETITIVE_ADVANTAGES.map((item) => (
+              <div key={item.label} className={`rounded-2xl border p-5 ${item.color}`}>
+                <div className={`inline-block text-2xl font-black mb-1 ${item.badge} px-2 py-0.5 rounded-lg`}>
+                  {item.highlight}
+                </div>
+                <p className="text-xs font-medium mb-3 opacity-70">{item.sub}</p>
+                <h3 className="font-semibold text-sm mb-1">{item.label}</h3>
+                <p className="text-xs opacity-70 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+          <div className="text-center">
+            <Link href="/pricing" className="inline-flex items-center gap-2 text-violet-700 hover:text-violet-800 font-semibold text-sm">
+              Полное сравнение тарифов и функций
+              <ChevronRight size={16} />
+            </Link>
           </div>
         </div>
       </section>

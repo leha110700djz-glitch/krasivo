@@ -12,6 +12,7 @@ from app.models.service import Service
 from app.models.master import Master
 from app.models.salon import Salon
 from app.models.user import User, UserRole
+from app.models.blacklist import BlacklistedClient
 from app.schemas.booking import BookingOut, BookingCreate, BookingDetail, CancelBookingRequest
 from app.deps import get_current_active_user
 from app.services.booking import check_slot_available
@@ -58,6 +59,19 @@ async def create_booking(
     service = svc_res.scalar_one_or_none()
     if not service:
         raise HTTPException(status_code=404, detail="Service not found")
+
+    # Check blacklist: block if this user is blacklisted at the salon
+    from sqlalchemy import or_ as _or
+    bl_query = select(BlacklistedClient).where(
+        BlacklistedClient.salon_id == service.salon_id,
+        _or(
+            BlacklistedClient.client_user_id == current_user.id,
+            BlacklistedClient.client_phone == current_user.phone,
+        ),
+    )
+    bl_res = await db.execute(bl_query)
+    if bl_res.scalar_one_or_none():
+        raise HTTPException(status_code=403, detail="Вы не можете записаться в этот салон")
 
     # Get master
     master_res = await db.execute(select(Master).where(Master.id == body.master_id, Master.is_active == True))

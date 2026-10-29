@@ -501,6 +501,8 @@ async def get_my_stats(
         "bookings_today": today_res.scalar() or 0,
         "revenue_month": int(rev_res.scalar() or 0),
         "new_clients": new_clients_res.scalar() or 0,
+        "clients_month": new_clients_res.scalar() or 0,
+        "avg_rating": float(salon.rating or 0.0),
         "rating": salon.rating,
         "bookings_week": bookings_week,
         "revenue_week": revenue_week,

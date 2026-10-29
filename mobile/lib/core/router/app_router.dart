@@ -22,6 +22,7 @@ import '../../features/owner/screens/owner_bookings_screen.dart';
 import '../../features/owner/screens/owner_masters_screen.dart';
 import '../../features/owner/screens/owner_services_screen.dart';
 import '../../features/owner/screens/manage_salon_screen.dart';
+import '../../features/profile/screens/loyalty_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 
@@ -181,6 +182,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (_, __) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/loyalty',
+        builder: (_, __) => const LoyaltyScreen(),
       ),
       GoRoute(
         path: '/owner/salon',

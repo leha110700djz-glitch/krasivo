@@ -30,6 +30,14 @@ interface PromoResult {
   message: string
 }
 
+interface CertificateResult {
+  valid: boolean
+  code: string
+  title: string
+  remaining_amount?: number
+  message: string
+}
+
 const confirmSchema = z.object({
   client_name: z.string().min(2, 'Введите имя'),
   client_phone: z.string().min(10, 'Введите телефон'),
@@ -59,6 +67,10 @@ export default function BookingFlow({ salonId, masterId: preselectedMasterId, on
   const [promoLoading, setPromoLoading] = useState(false)
   const [promoError, setPromoError] = useState('')
   const promoInputRef = useRef<HTMLInputElement>(null)
+  const [certCode, setCertCode] = useState('')
+  const [certResult, setCertResult] = useState<CertificateResult | null>(null)
+  const [certLoading, setCertLoading] = useState(false)
+  const [certError, setCertError] = useState('')
 
   const { data: services } = useSalonServices(salonId)
   const { data: masters } = useSalonMasters(salonId)
@@ -342,6 +354,34 @@ export default function BookingFlow({ salonId, masterId: preselectedMasterId, on
     setPromoError('')
   }
 
+  const applyCertificate = async () => {
+    const code = certCode.trim().toUpperCase()
+    if (!code) return
+    setCertLoading(true)
+    setCertError('')
+    try {
+      const res = await api.get<CertificateResult>(`/certificates/check/${code}`)
+      if (res.data.valid) {
+        setCertResult(res.data)
+        setCertError('')
+      } else {
+        setCertResult(null)
+        setCertError(res.data.message)
+      }
+    } catch {
+      setCertError('Не удалось проверить сертификат')
+      setCertResult(null)
+    } finally {
+      setCertLoading(false)
+    }
+  }
+
+  const removeCertificate = () => {
+    setCertResult(null)
+    setCertCode('')
+    setCertError('')
+  }
+
   // Step 3: Confirmation
   const onSubmit = async (data: { client_name: string; client_phone: string; notes?: string }) => {
     if (!selectedService || !selectedMaster || !selectedDate || !selectedTime) return
@@ -356,6 +396,7 @@ export default function BookingFlow({ salonId, masterId: preselectedMasterId, on
         client_name: data.client_name,
         client_phone: data.client_phone,
         ...(promoResult?.valid && { promo_code: promoResult.code }),
+        ...(certResult?.valid && { certificate_code: certResult.code }),
       })
       setSuccess(true)
     } catch (e: unknown) {
@@ -415,7 +456,7 @@ export default function BookingFlow({ salonId, masterId: preselectedMasterId, on
       </div>
 
       {/* Promo code input */}
-      <div className="mb-4">
+      <div className="mb-3">
         {promoResult?.valid ? (
           <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-2.5">
             <div className="flex items-center gap-2">
@@ -456,6 +497,55 @@ export default function BookingFlow({ salonId, masterId: preselectedMasterId, on
             </div>
             {promoError && (
               <p className="text-xs text-red-600 mt-1.5 ml-1">{promoError}</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Gift certificate input */}
+      <div className="mb-4">
+        {certResult?.valid ? (
+          <div className="flex items-center justify-between bg-purple-50 border border-purple-200 rounded-xl px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <Tag size={14} className="text-purple-600" />
+              <div>
+                <p className="text-xs font-bold text-purple-700 tracking-wider">{certResult.code}</p>
+                <p className="text-xs text-purple-600">
+                  {certResult.message}
+                  {certResult.remaining_amount !== undefined && ` · Доступно: ${certResult.remaining_amount} ₽`}
+                </p>
+              </div>
+            </div>
+            <button onClick={removeCertificate} className="text-gray-400 hover:text-gray-600 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div className="flex gap-2">
+              <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-xl px-3 py-2.5 focus-within:border-purple-400 transition-colors">
+                <Tag size={15} className="text-gray-400 shrink-0" />
+                <input
+                  type="text"
+                  value={certCode}
+                  onChange={(e) => setCertCode(e.target.value.toUpperCase())}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), applyCertificate())}
+                  placeholder="Подарочный сертификат"
+                  className="flex-1 text-sm outline-none bg-transparent placeholder:text-gray-400 uppercase"
+                  maxLength={12}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={applyCertificate}
+                disabled={!certCode.trim() || certLoading}
+                className="px-4 py-2.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+              >
+                {certLoading ? '...' : 'Применить'}
+              </button>
+            </div>
+            {certError && (
+              <p className="text-xs text-red-600 mt-1.5 ml-1">{certError}</p>
             )}
           </div>
         )}

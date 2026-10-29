@@ -1,8 +1,9 @@
 'use client'
 
-import { TrendingUp, Users, Scissors, Award, BarChart3 } from 'lucide-react'
+import { TrendingUp, Users, Scissors, Award, BarChart3, BarChart2 } from 'lucide-react'
 import { useDashboardStats } from '@/hooks/useDashboard'
 import { useDashboardBookings } from '@/hooks/useBookings'
+import Link from 'next/link'
 import StatsCard from '@/components/dashboard/StatsCard'
 import { StatCardSkeleton } from '@/components/ui/Skeleton'
 import { formatPrice } from '@/lib/utils'
@@ -41,7 +42,16 @@ export default function StatsPage() {
 
   return (
     <div className="p-6 lg:p-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Статистика</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Статистика</h1>
+        <Link
+          href="/dashboard/analytics"
+          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors"
+        >
+          <BarChart2 size={16} />
+          Подробная аналитика
+        </Link>
+      </div>
 
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">

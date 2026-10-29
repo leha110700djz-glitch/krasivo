@@ -53,6 +53,16 @@ class ApiEndpoints {
   // Promos
   static String promoByCode(String code) => '/promos/$code';
 
+  // Loyalty
+  static const loyaltyMe = '/loyalty/me';
+  static const loyaltyLeaderboard = '/loyalty/leaderboard';
+
+  // Messages
+  static const myConversations = '/messages/conversations';
+  static String conversation(String userId) => '/messages/$userId';
+  static const sendMessage = '/messages';
+  static const unreadCount = '/messages/unread_count';
+
   // Push notifications
   static const registerPush = '/notifications/register-push';
 }

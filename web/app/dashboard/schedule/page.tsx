@@ -1,315 +1,456 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Clock, Save, CheckCircle, AlertCircle } from 'lucide-react'
-import Button from '@/components/ui/Button'
-import { Skeleton } from '@/components/ui/Skeleton'
+import { useState, useMemo } from 'react'
+import { ChevronLeft, ChevronRight, X, Check, Trash2 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuthStore } from '@/store/auth'
 import { useDashboardMasters } from '@/hooks/useMaster'
 import api from '@/lib/api'
 
-const DAYS = [
-  { key: 0, label: 'Пн', full: 'Понедельник' },
-  { key: 1, label: 'Вт', full: 'Вторник' },
-  { key: 2, label: 'Ср', full: 'Среда' },
-  { key: 3, label: 'Чт', full: 'Четверг' },
-  { key: 4, label: 'Пт', full: 'Пятница' },
-  { key: 5, label: 'Сб', full: 'Суббота' },
-  { key: 6, label: 'Вс', full: 'Воскресенье' },
-]
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-const HOURS = Array.from({ length: 24 }, (_, i) => {
-  const h = i.toString().padStart(2, '0')
-  return { value: `${h}:00`, label: `${h}:00` }
-})
-
-interface DaySchedule {
-  day_of_week: number
-  is_working: boolean
+interface WorkShift {
+  id: string
+  master_id: string
+  salon_id: string
+  shift_date: string
   start_time: string
   end_time: string
+  is_day_off: boolean
+  note?: string | null
 }
 
-const DEFAULT_SCHEDULE: DaySchedule[] = DAYS.map((d) => ({
-  day_of_week: d.key,
-  is_working: d.key < 5,
-  start_time: '10:00',
-  end_time: '20:00',
-}))
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const DAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
+
+const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`)
+
+function weekStart(d: Date): Date {
+  const copy = new Date(d)
+  copy.setHours(0, 0, 0, 0)
+  const dow = copy.getDay() // 0=Sun
+  const diff = dow === 0 ? -6 : 1 - dow
+  copy.setDate(copy.getDate() + diff)
+  return copy
+}
+
+function addDays(d: Date, n: number): Date {
+  const r = new Date(d)
+  r.setDate(r.getDate() + n)
+  return r
+}
+
+function toISO(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function formatWeekLabel(mon: Date, sun: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
+  return `${mon.toLocaleDateString('ru-RU', opts)} — ${sun.toLocaleDateString('ru-RU', opts)}`
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+interface ModalState {
+  masterId: string
+  date: string
+  shift?: WorkShift
+}
+
+interface FormState {
+  start_time: string
+  end_time: string
+  is_day_off: boolean
+  note: string
+}
 
 export default function SchedulePage() {
+  const token = useAuthStore((s) => s.token)
+  const queryClient = useQueryClient()
   const { data: masters, isLoading: mastersLoading } = useDashboardMasters()
-  const [selectedMasterId, setSelectedMasterId] = useState<string>('')
-  const [schedule, setSchedule] = useState<DaySchedule[]>(DEFAULT_SCHEDULE)
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
 
-  // Auto-select first master
-  useEffect(() => {
-    if (masters && masters.length > 0 && !selectedMasterId) {
-      setSelectedMasterId(String(masters[0].id))
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [modal, setModal] = useState<ModalState | null>(null)
+  const [form, setForm] = useState<FormState>({
+    start_time: '10:00',
+    end_time: '20:00',
+    is_day_off: false,
+    note: '',
+  })
+
+  // ── Week dates ───────────────────────────────────────────────────────────────
+  const today = useMemo(() => new Date(), [])
+  const monday = useMemo(() => addDays(weekStart(today), weekOffset * 7), [today, weekOffset])
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday])
+  const startDate = toISO(monday)
+  const endDate = toISO(weekDays[6])
+  const todayISO = toISO(today)
+
+  // ── Fetch shifts ─────────────────────────────────────────────────────────────
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery({
+    queryKey: ['shifts', startDate, endDate],
+    queryFn: () => api.get<WorkShift[]>('/shifts', token!, { start_date: startDate, end_date: endDate }),
+    enabled: !!token,
+  })
+
+  // Build lookup: master_id → date → shift
+  const shiftMap = useMemo(() => {
+    const map: Record<string, Record<string, WorkShift>> = {}
+    for (const s of shifts) {
+      if (!map[s.master_id]) map[s.master_id] = {}
+      map[s.master_id][s.shift_date] = s
     }
-  }, [masters, selectedMasterId])
+    return map
+  }, [shifts])
 
-  // Load schedule when master changes
-  useEffect(() => {
-    if (!selectedMasterId) return
-    setLoading(true)
-    setError('')
-    api.get<DaySchedule[]>(`/masters/${selectedMasterId}/schedule`)
-      .then((res) => {
-        const data = res.data
-        if (data && data.length > 0) {
-          // Merge with defaults for any missing days
-          const merged = DAYS.map((d) => {
-            const found = data.find((s) => s.day_of_week === d.key)
-            return found
-              ? { day_of_week: d.key, is_working: found.is_working, start_time: found.start_time.substring(0, 5), end_time: found.end_time.substring(0, 5) }
-              : { day_of_week: d.key, is_working: d.key < 5, start_time: '10:00', end_time: '20:00' }
-          })
-          setSchedule(merged)
-        } else {
-          setSchedule(DEFAULT_SCHEDULE)
-        }
-      })
-      .catch(() => setSchedule(DEFAULT_SCHEDULE))
-      .finally(() => setLoading(false))
-  }, [selectedMasterId])
+  // ── Mutations ────────────────────────────────────────────────────────────────
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['shifts'] })
 
-  const toggleDay = (dayKey: number) => {
-    setSchedule((prev) =>
-      prev.map((s) => s.day_of_week === dayKey ? { ...s, is_working: !s.is_working } : s)
+  const upsertMutation = useMutation({
+    mutationFn: (data: object) => api.post<WorkShift>('/shifts', data, token!),
+    onSuccess: () => { invalidate(); setModal(null) },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/shifts/${id}`, token!),
+    onSuccess: () => { invalidate(); setModal(null) },
+  })
+
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+  const openModal = (masterId: string, date: string) => {
+    const shift = shiftMap[masterId]?.[date]
+    setModal({ masterId, date, shift })
+    setForm(shift
+      ? { start_time: shift.start_time.substring(0, 5), end_time: shift.end_time.substring(0, 5), is_day_off: shift.is_day_off, note: shift.note || '' }
+      : { start_time: '10:00', end_time: '20:00', is_day_off: false, note: '' }
     )
   }
 
-  const setTime = (dayKey: number, field: 'start_time' | 'end_time', value: string) => {
-    setSchedule((prev) =>
-      prev.map((s) => s.day_of_week === dayKey ? { ...s, [field]: value } : s)
-    )
+  const handleSave = () => {
+    if (!modal) return
+    upsertMutation.mutate({
+      master_id: modal.masterId,
+      shift_date: modal.date,
+      start_time: form.start_time,
+      end_time: form.end_time,
+      is_day_off: form.is_day_off,
+      note: form.note || null,
+    })
   }
 
-  const handleSave = async () => {
-    if (!selectedMasterId) return
-    setSaving(true)
-    setError('')
-    setSaved(false)
-    try {
-      await api.put(`/masters/${selectedMasterId}/schedule`, { schedule })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    } catch {
-      setError('Не удалось сохранить расписание. Попробуйте ещё раз.')
-    } finally {
-      setSaving(false)
-    }
+  const handleDelete = () => {
+    if (!modal?.shift) return
+    deleteMutation.mutate(modal.shift.id)
   }
 
-  const copyToAll = (sourceDay: number) => {
-    const src = schedule.find((s) => s.day_of_week === sourceDay)
-    if (!src) return
-    setSchedule((prev) =>
-      prev.map((s) =>
-        s.day_of_week !== sourceDay && s.is_working
-          ? { ...s, start_time: src.start_time, end_time: src.end_time }
-          : s
-      )
-    )
-  }
+  const modalDateLabel = modal
+    ? new Date(modal.date + 'T12:00:00').toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })
+    : ''
 
-  const selectedMaster = masters?.find((m) => String(m.id) === selectedMasterId)
-  const workingDays = schedule.filter((s) => s.is_working).length
+  const isCurrentWeek = weekOffset === 0
+  const isLoading = mastersLoading || shiftsLoading
 
   return (
     <div className="p-6 lg:p-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Расписание</h1>
-          <p className="text-gray-500 mt-1 text-sm">Настройте рабочие часы для каждого мастера</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold text-gray-900">Смены</h1>
+          <p className="text-gray-500 mt-1 text-sm">Планирование рабочих смен мастеров по дням</p>
         </div>
-        <Button onClick={handleSave} loading={saving} disabled={!selectedMasterId}>
-          <Save size={16} />
-          Сохранить
-        </Button>
+        {/* Week navigation */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setWeekOffset((w) => w - 1)}
+            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600"
+            aria-label="Предыдущая неделя"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => setWeekOffset(0)}
+            className={`px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+              isCurrentWeek
+                ? 'bg-primary-600 text-white border-primary-600'
+                : 'border-gray-200 hover:bg-gray-50 text-gray-700'
+            }`}
+          >
+            Сегодня
+          </button>
+          <button
+            onClick={() => setWeekOffset((w) => w + 1)}
+            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-gray-600"
+            aria-label="Следующая неделя"
+          >
+            <ChevronRight size={18} />
+          </button>
+          <span className="ml-1 text-sm font-medium text-gray-600 hidden sm:block">
+            {formatWeekLabel(monday, weekDays[6])}
+          </span>
+        </div>
       </div>
 
-      {/* Master selector */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-3">Выберите мастера</label>
-        {mastersLoading ? (
-          <div className="flex gap-3">
-            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-32 rounded-xl" />)}
-          </div>
-        ) : masters && masters.length > 0 ? (
-          <div className="flex flex-wrap gap-3">
-            {masters.map((master) => (
-              <button
-                key={master.id}
-                onClick={() => setSelectedMasterId(String(master.id))}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 transition-all ${
-                  selectedMasterId === String(master.id)
-                    ? 'border-primary-600 bg-primary-50'
-                    : 'border-gray-100 hover:border-gray-200 bg-white'
-                }`}
-              >
-                <div className="w-9 h-9 rounded-lg bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm shrink-0">
-                  {master.name.charAt(0)}
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-gray-900">{master.name.split(' ')[0]}</p>
-                  <p className="text-xs text-gray-500">{(master.specializations || []).slice(0, 2).join(', ') || 'Мастер'}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 text-sm">Нет мастеров. Добавьте мастеров в разделе «Мастера».</p>
-        )}
-      </div>
+      {/* Mobile week label */}
+      <p className="text-sm text-gray-500 mb-4 sm:hidden">{formatWeekLabel(monday, weekDays[6])}</p>
 
-      {/* Schedule grid */}
-      {selectedMasterId && (
-        <>
-          {/* Summary */}
-          <div className="flex items-center gap-4 mb-5">
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Clock size={15} className="text-primary-600" />
-              <span>{selectedMaster?.name} — <strong>{workingDays} рабочих дней</strong></span>
+      {/* Week grid */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+        <div className="min-w-[700px]">
+          {/* Header row */}
+          <div
+            className="grid border-b border-gray-100 bg-gray-50"
+            style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}
+          >
+            <div className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Мастер
             </div>
-            {saved && (
-              <div className="flex items-center gap-1.5 text-sm text-green-600">
-                <CheckCircle size={15} />
-                Расписание сохранено
-              </div>
-            )}
-            {error && (
-              <div className="flex items-center gap-1.5 text-sm text-red-600">
-                <AlertCircle size={15} />
-                {error}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Column headers */}
-            <div className="grid grid-cols-[140px_1fr_1fr_auto] gap-0 px-5 py-3 bg-gray-50 border-b border-gray-100 text-xs font-medium text-gray-500 uppercase tracking-wide">
-              <div>День</div>
-              <div>Начало</div>
-              <div>Конец</div>
-              <div className="w-24">Действие</div>
-            </div>
-
-            {loading ? (
-              <div className="divide-y divide-gray-50">
-                {DAYS.map((d) => (
-                  <div key={d.key} className="px-5 py-4">
-                    <Skeleton className="h-10 rounded-xl" />
+            {weekDays.map((d, i) => {
+              const isToday = toISO(d) === todayISO
+              return (
+                <div
+                  key={i}
+                  className={`px-2 py-3 text-center border-l border-gray-100 ${
+                    isToday ? 'bg-primary-50' : ''
+                  }`}
+                >
+                  <div className={`text-xs font-semibold uppercase tracking-wide ${isToday ? 'text-primary-600' : 'text-gray-400'}`}>
+                    {DAY_LABELS[i]}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-50">
-                {schedule.map((daySchedule) => {
-                  const day = DAYS.find((d) => d.key === daySchedule.day_of_week)!
-                  const isWeekend = daySchedule.day_of_week >= 5
-                  return (
-                    <div
-                      key={daySchedule.day_of_week}
-                      className={`grid grid-cols-[140px_1fr_1fr_auto] gap-4 px-5 py-4 items-center transition-colors ${
-                        !daySchedule.is_working ? 'bg-gray-50/50 opacity-70' : ''
-                      }`}
-                    >
-                      {/* Day toggle */}
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => toggleDay(daySchedule.day_of_week)}
-                          className={`relative w-10 h-5.5 rounded-full transition-colors focus:outline-none ${
-                            daySchedule.is_working ? 'bg-primary-600' : 'bg-gray-200'
-                          }`}
-                          style={{ height: '22px' }}
-                        >
-                          <span
-                            className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform ${
-                              daySchedule.is_working ? 'translate-x-4.5' : ''
-                            }`}
-                            style={{ width: '18px', height: '18px', transform: daySchedule.is_working ? 'translateX(18px)' : 'translateX(0)' }}
-                          />
-                        </button>
-                        <div>
-                          <p className={`text-sm font-medium ${daySchedule.is_working ? 'text-gray-900' : 'text-gray-400'}`}>
-                            {day.full}
-                          </p>
-                          {isWeekend && (
-                            <p className="text-xs text-gray-400">Выходной</p>
-                          )}
-                        </div>
-                      </div>
+                  <div className={`text-sm font-bold mt-0.5 ${isToday ? 'text-primary-700' : 'text-gray-700'}`}>
+                    {d.getDate()}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
 
-                      {/* Start time */}
-                      <select
-                        value={daySchedule.start_time}
-                        onChange={(e) => setTime(daySchedule.day_of_week, 'start_time', e.target.value)}
-                        disabled={!daySchedule.is_working}
-                        className="px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:opacity-40 disabled:cursor-not-allowed bg-white"
-                      >
-                        {HOURS.map((h) => (
-                          <option key={h.value} value={h.value}>{h.label}</option>
-                        ))}
-                      </select>
-
-                      {/* End time */}
-                      <select
-                        value={daySchedule.end_time}
-                        onChange={(e) => setTime(daySchedule.day_of_week, 'end_time', e.target.value)}
-                        disabled={!daySchedule.is_working}
-                        className="px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 disabled:opacity-40 disabled:cursor-not-allowed bg-white"
-                      >
-                        {HOURS.map((h) => (
-                          <option key={h.value} value={h.value}>{h.label}</option>
-                        ))}
-                      </select>
-
-                      {/* Copy action */}
-                      {daySchedule.is_working && (
-                        <button
-                          onClick={() => copyToAll(daySchedule.day_of_week)}
-                          className="text-xs text-primary-600 hover:text-primary-800 font-medium whitespace-nowrap px-2 py-1 rounded-lg hover:bg-primary-50 transition-colors w-24 text-center"
-                        >
-                          Скопировать
-                        </button>
-                      )}
-                      {!daySchedule.is_working && <div className="w-24" />}
+          {/* Master rows */}
+          {isLoading ? (
+            <div className="p-8 text-center text-gray-400 text-sm">Загрузка...</div>
+          ) : masters && masters.length > 0 ? (
+            <div className="divide-y divide-gray-50">
+              {masters.map((master) => (
+                <div
+                  key={master.id}
+                  className="grid hover:bg-gray-50/30 transition-colors"
+                  style={{ gridTemplateColumns: '180px repeat(7, 1fr)' }}
+                >
+                  {/* Master name */}
+                  <div className="px-4 py-3 flex items-center gap-2.5 border-r border-gray-100">
+                    <div className="w-8 h-8 rounded-lg bg-primary-100 flex items-center justify-center text-primary-700 font-bold text-sm shrink-0">
+                      {master.name.charAt(0)}
                     </div>
-                  )
-                })}
+                    <span className="text-sm font-medium text-gray-900 truncate" title={master.name}>
+                      {master.name.split(' ')[0]}
+                    </span>
+                  </div>
+
+                  {/* Day cells */}
+                  {weekDays.map((d, i) => {
+                    const dateStr = toISO(d)
+                    const shift = shiftMap[String(master.id)]?.[dateStr]
+                    const isToday = dateStr === todayISO
+
+                    let cellBg = 'hover:bg-primary-50/50'
+                    if (shift) {
+                      cellBg = shift.is_day_off
+                        ? 'bg-gray-50 hover:bg-gray-100'
+                        : 'bg-green-50/60 hover:bg-green-50'
+                    }
+
+                    return (
+                      <button
+                        key={i}
+                        onClick={() => openModal(String(master.id), dateStr)}
+                        className={`px-1 py-2 border-l border-gray-50 transition-colors min-h-[58px] flex flex-col items-center justify-center gap-0.5 ${cellBg} ${isToday ? 'ring-1 ring-inset ring-primary-300' : ''}`}
+                        title={shift ? (shift.is_day_off ? 'Выходной — нажмите для изменения' : `${shift.start_time.substring(0,5)}–${shift.end_time.substring(0,5)}`) : 'Не запланировано — нажмите, чтобы добавить'}
+                      >
+                        {shift ? (
+                          shift.is_day_off ? (
+                            <span className="text-[11px] text-gray-400 font-medium leading-tight">Выходной</span>
+                          ) : (
+                            <>
+                              <span className="text-xs font-bold text-green-700 leading-tight">
+                                {shift.start_time.substring(0, 5)}
+                              </span>
+                              <span className="text-[10px] text-green-500 leading-none">—</span>
+                              <span className="text-xs font-bold text-green-700 leading-tight">
+                                {shift.end_time.substring(0, 5)}
+                              </span>
+                            </>
+                          )
+                        ) : (
+                          <span className="text-lg text-gray-200 leading-none">+</span>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-10 text-center text-gray-400 text-sm">
+              Нет мастеров. Добавьте мастеров в разделе «Мастера».
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div className="mt-4 flex flex-wrap items-center gap-5 text-xs text-gray-500">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-green-200 inline-block" />
+          Рабочая смена
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded bg-gray-200 inline-block" />
+          Выходной
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded border border-gray-200 inline-block" />
+          Не запланировано
+        </div>
+        <span className="text-gray-400">Нажмите на ячейку, чтобы изменить смену</span>
+      </div>
+
+      {/* Modal */}
+      {modal && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"
+          onClick={() => setModal(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between mb-5">
+              <h3 className="text-base font-semibold text-gray-900 capitalize">{modalDateLabel}</h3>
+              <button
+                onClick={() => setModal(null)}
+                className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 ml-2 shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Day off toggle */}
+              <label className="flex items-center gap-3 cursor-pointer select-none">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.is_day_off}
+                  onClick={() => setForm((f) => ({ ...f, is_day_off: !f.is_day_off }))}
+                  className={`relative w-10 shrink-0 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-300`}
+                  style={{
+                    height: 22,
+                    backgroundColor: form.is_day_off ? '#6b7280' : '#d1d5db',
+                  }}
+                >
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: form.is_day_off ? 20 : 2,
+                      width: 18,
+                      height: 18,
+                      background: 'white',
+                      borderRadius: '50%',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                      transition: 'left 0.15s',
+                    }}
+                  />
+                </button>
+                <span className="text-sm font-medium text-gray-700">Выходной день</span>
+              </label>
+
+              {!form.is_day_off && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Начало смены
+                    </label>
+                    <select
+                      value={form.start_time}
+                      onChange={(e) => setForm((f) => ({ ...f, start_time: e.target.value }))}
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 bg-white"
+                    >
+                      {HOURS.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Конец смены
+                    </label>
+                    <select
+                      value={form.end_time}
+                      onChange={(e) => setForm((f) => ({ ...f, end_time: e.target.value }))}
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 bg-white"
+                    >
+                      {HOURS.map((h) => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Заметка <span className="text-gray-400 font-normal">(необязательно)</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.note}
+                  onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+                  placeholder="Например: сокращённый день"
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100"
+                />
               </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2.5 mt-6">
+              {modal.shift && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleteMutation.isPending}
+                  className="p-2.5 text-red-500 border border-red-200 rounded-xl hover:bg-red-50 transition-colors disabled:opacity-50 shrink-0"
+                  title="Удалить смену"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+              <button
+                onClick={() => setModal(null)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+              >
+                Отмена
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={upsertMutation.isPending}
+                className="flex-1 px-4 py-2.5 text-sm font-medium bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <Check size={15} />
+                Сохранить
+              </button>
+            </div>
+
+            {(upsertMutation.isError || deleteMutation.isError) && (
+              <p className="mt-3 text-xs text-red-600 text-center">
+                Ошибка. Попробуйте ещё раз.
+              </p>
             )}
           </div>
-
-          {/* Quick presets */}
-          <div className="mt-5 flex flex-wrap gap-3">
-            <p className="text-sm text-gray-500 self-center mr-1">Быстрые шаблоны:</p>
-            <button
-              onClick={() => setSchedule(DAYS.map((d) => ({ day_of_week: d.key, is_working: d.key < 5, start_time: '09:00', end_time: '18:00' }))}
-              className="text-sm bg-white border border-gray-200 hover:border-primary-300 hover:bg-primary-50 text-gray-700 px-4 py-2 rounded-xl transition-colors"
-            >
-              Пн-Пт 9:00–18:00
-            </button>
-            <button
-              onClick={() => setSchedule(DAYS.map((d) => ({ day_of_week: d.key, is_working: d.key < 6, start_time: '10:00', end_time: '20:00' }))}
-              className="text-sm bg-white border border-gray-200 hover:border-primary-300 hover:bg-primary-50 text-gray-700 px-4 py-2 rounded-xl transition-colors"
-            >
-              Пн-Сб 10:00–20:00
-            </button>
-            <button
-              onClick={() => setSchedule(DAYS.map((d) => ({ day_of_week: d.key, is_working: true, start_time: '10:00', end_time: '22:00' }))}
-              className="text-sm bg-white border border-gray-200 hover:border-primary-300 hover:bg-primary-50 text-gray-700 px-4 py-2 rounded-xl transition-colors"
-            >
-              Ежедневно 10:00–22:00
-            </button>
-          </div>
-        </>
+        </div>
       )}
     </div>
   )

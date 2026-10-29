@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../shared/models/user.dart';
+import 'loyalty_screen.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -129,6 +130,12 @@ class ProfileScreen extends ConsumerWidget {
                         icon: Icons.calendar_today_outlined,
                         label: AppStrings.history,
                         onTap: () => context.go('/home/bookings'),
+                      ),
+                      _MenuItem(
+                        icon: Icons.stars_rounded,
+                        label: 'Мои баллы',
+                        iconColor: const Color(0xFFD97706),
+                        onTap: () => context.push('/loyalty'),
                       ),
                       _MenuItem(
                         icon: Icons.notifications_outlined,
