@@ -114,6 +114,15 @@ const OWNER_FEATURES = [
   { icon: TrendingUp, title: 'Расчёт зарплат', desc: 'Авто-расчёт по % или ставке за запись' },
 ]
 
+const MASTER_FEATURES = [
+  { icon: Clock, title: 'Свободный график', desc: 'Сами выбираете рабочее время и дни' },
+  { icon: Star, title: 'Портфолио и рейтинг', desc: 'Фото работ + отзывы клиентов' },
+  { icon: TrendingUp, title: 'Аналитика доходов', desc: 'Прозрачный учёт заработка по периодам' },
+  { icon: Bell, title: 'Запись 24/7', desc: 'Клиенты сами записываются без звонков' },
+  { icon: Users, title: 'База клиентов', desc: 'История визитов и предпочтений каждого' },
+  { icon: Sparkles, title: 'Старт бесплатно', desc: 'Нет вложений на входе, платите с роста' },
+]
+
 const COMPETITIVE_ADVANTAGES = [
   {
     label: 'Нет комиссии',
@@ -362,87 +371,168 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Client / Owner split section */}
-      <section className="py-20">
+      {/* Top Masters */}
+      <section className="py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Топ мастера</h2>
+              <p className="text-gray-500 mt-1 text-sm">Лучшие специалисты по рейтингу</p>
+            </div>
+            <Link href="/salons" className="hidden sm:flex items-center gap-1 text-primary-700 hover:text-primary-800 text-sm font-medium">
+              Все мастера <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { name: 'Алина М.', spec: 'Маникюр', rating: 4.9, reviews: 312, photo: 'https://images.unsplash.com/photo-1580618672591-eb180b1a973f?w=300&q=80&auto=format' },
+              { name: 'Карина С.', spec: 'Косметология', rating: 4.8, reviews: 187, photo: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=300&q=80&auto=format' },
+              { name: 'Дмитрий К.', spec: 'Барбер', rating: 4.9, reviews: 445, photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80&auto=format' },
+              { name: 'Мария Л.', spec: 'Брови', rating: 5.0, reviews: 234, photo: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2?w=300&q=80&auto=format' },
+              { name: 'Юлия В.', spec: 'Макияж', rating: 4.7, reviews: 156, photo: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=300&q=80&auto=format' },
+              { name: 'Екатерина Н.', spec: 'Стрижки', rating: 4.8, reviews: 298, photo: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=300&q=80&auto=format' },
+            ].map((master) => (
+              <Link key={master.name} href="/salons" className="group flex flex-col items-center text-center">
+                <div className="relative mb-3">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden ring-2 ring-gray-100 group-hover:ring-primary-300 transition-all">
+                    <img src={master.photo} alt={master.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                  </div>
+                  <div className="absolute -bottom-1.5 -right-1.5 bg-amber-400 text-white text-xs font-bold px-1.5 py-0.5 rounded-lg flex items-center gap-0.5">
+                    <Star size={9} className="fill-white" />
+                    {master.rating}
+                  </div>
+                </div>
+                <p className="text-sm font-semibold text-gray-900 leading-tight">{master.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{master.spec}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{master.reviews} отзывов</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3-way split: Clients / Masters / Owners */}
+      <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Красиво — для всех</h2>
-            <p className="text-gray-500 text-sm max-w-lg mx-auto">Единая платформа для клиентов и владельцев бизнеса в сфере красоты</p>
+            <span className="inline-block bg-primary-100 text-primary-700 text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">Для каждого</span>
+            <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-3">Красиво — ваш путь в мире красоты</h2>
+            <p className="text-gray-500 text-sm max-w-xl mx-auto">Одна платформа для трёх разных историй успеха</p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* For clients */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 p-8 md:p-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full -translate-y-1/3 translate-x-1/3" />
-              <div className="relative">
-                <div className="inline-flex items-center gap-2 bg-primary-500/20 border border-primary-400/30 rounded-full px-4 py-1.5 mb-6 text-sm text-primary-300">
-                  <Scissors size={13} />
-                  <span>Для клиентов</span>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 to-gray-800 p-7 flex flex-col">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-primary-500/10 rounded-full -translate-y-1/3 translate-x-1/3" />
+              <div className="relative flex-1 flex flex-col">
+                <div className="inline-flex items-center gap-2 bg-primary-500/20 border border-primary-400/30 rounded-full px-3 py-1 mb-5 text-xs text-primary-300 w-fit">
+                  <Scissors size={11} />
+                  <span>Гостям</span>
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">
+                <h3 className="text-xl font-bold text-white mb-2">
                   Запись к мастеру<br />за 2 минуты
                 </h3>
-                <p className="text-gray-400 text-sm mb-8 leading-relaxed">
-                  Найдите своего идеального мастера, запишитесь онлайн и получайте напоминания о записи
+                <p className="text-gray-400 text-xs mb-6 leading-relaxed">
+                  Найдите идеального мастера, запишитесь онлайн и копите баллы лояльности с каждым визитом
                 </p>
-                <div className="grid grid-cols-2 gap-3 mb-8">
+                <div className="space-y-3 mb-6 flex-1">
                   {CLIENT_FEATURES.map(({ icon: Icon, title, desc }) => (
-                    <div key={title} className="flex items-start gap-2.5">
-                      <div className="w-7 h-7 bg-primary-500/20 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                        <Icon size={14} className="text-primary-400" />
+                    <div key={title} className="flex items-center gap-3">
+                      <div className="w-7 h-7 bg-primary-500/20 rounded-lg flex items-center justify-center shrink-0">
+                        <Icon size={13} className="text-primary-400" />
                       </div>
                       <div>
-                        <p className="text-white text-xs font-medium">{title}</p>
+                        <p className="text-white text-xs font-medium leading-tight">{title}</p>
                         <p className="text-gray-500 text-xs">{desc}</p>
                       </div>
                     </div>
                   ))}
                 </div>
                 <Link href="/salons">
-                  <button className="bg-primary-600 hover:bg-primary-500 transition-colors text-white rounded-xl px-6 py-3 font-semibold text-sm flex items-center gap-2">
+                  <button className="w-full bg-primary-600 hover:bg-primary-500 transition-colors text-white rounded-xl px-5 py-2.5 font-semibold text-sm flex items-center justify-center gap-2">
                     Найти мастера
-                    <ArrowRight size={16} />
+                    <ArrowRight size={15} />
+                  </button>
+                </Link>
+              </div>
+            </div>
+
+            {/* For masters */}
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-900 to-purple-800 p-7 flex flex-col ring-2 ring-violet-400/30">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-violet-400/10 rounded-full -translate-y-1/3 translate-x-1/3" />
+              <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-violet-500/10 rounded-full" />
+              <div className="relative flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-5">
+                  <div className="inline-flex items-center gap-2 bg-violet-500/25 border border-violet-400/30 rounded-full px-3 py-1 text-xs text-violet-200 w-fit">
+                    <Sparkles size={11} />
+                    <span>Мастерам</span>
+                  </div>
+                  <span className="text-xs bg-violet-400/20 text-violet-300 border border-violet-400/20 px-2 py-0.5 rounded-full font-medium">Горячо</span>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">
+                  Принимайте клиентов<br />на своих условиях
+                </h3>
+                <p className="text-violet-200/70 text-xs mb-6 leading-relaxed">
+                  Создайте профессиональное портфолио, ведите расписание и получайте онлайн-записи без посредников
+                </p>
+                <div className="space-y-3 mb-6 flex-1">
+                  {MASTER_FEATURES.map(({ icon: Icon, title, desc }) => (
+                    <div key={title} className="flex items-center gap-3">
+                      <div className="w-7 h-7 bg-violet-500/20 rounded-lg flex items-center justify-center shrink-0">
+                        <Icon size={13} className="text-violet-300" />
+                      </div>
+                      <div>
+                        <p className="text-white text-xs font-medium leading-tight">{title}</p>
+                        <p className="text-violet-200/60 text-xs">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Link href="/for-masters">
+                  <button className="w-full bg-violet-500 hover:bg-violet-400 transition-colors text-white rounded-xl px-5 py-2.5 font-semibold text-sm flex items-center justify-center gap-2">
+                    Стать мастером
+                    <ArrowRight size={15} />
                   </button>
                 </Link>
               </div>
             </div>
 
             {/* For owners */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 p-8 md:p-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-400/10 rounded-full -translate-y-1/3 translate-x-1/3" />
-              <div className="relative">
-                <div className="inline-flex items-center gap-2 bg-amber-100 border border-amber-200 rounded-full px-4 py-1.5 mb-6 text-sm text-amber-700">
-                  <TrendingUp size={13} />
-                  <span>Для владельцев</span>
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-100 p-7 flex flex-col">
+              <div className="absolute top-0 right-0 w-48 h-48 bg-amber-400/10 rounded-full -translate-y-1/3 translate-x-1/3" />
+              <div className="relative flex-1 flex flex-col">
+                <div className="inline-flex items-center gap-2 bg-amber-100 border border-amber-200 rounded-full px-3 py-1 mb-5 text-xs text-amber-700 w-fit">
+                  <TrendingUp size={11} />
+                  <span>Хозяевам</span>
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
                   Управляйте бизнесом<br />в одном окне
                 </h3>
-                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                <p className="text-gray-500 text-xs mb-6 leading-relaxed">
                   Зарегистрируйте салон, добавьте мастеров и начните принимать онлайн-записи уже сегодня
                 </p>
-                <div className="grid grid-cols-2 gap-3 mb-8">
+                <div className="space-y-3 mb-6 flex-1">
                   {OWNER_FEATURES.map(({ icon: Icon, title, desc }) => (
-                    <div key={title} className="flex items-start gap-2.5">
-                      <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                        <Icon size={14} className="text-amber-600" />
+                    <div key={title} className="flex items-center gap-3">
+                      <div className="w-7 h-7 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+                        <Icon size={13} className="text-amber-600" />
                       </div>
                       <div>
-                        <p className="text-gray-800 text-xs font-medium">{title}</p>
+                        <p className="text-gray-800 text-xs font-medium leading-tight">{title}</p>
                         <p className="text-gray-500 text-xs">{desc}</p>
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="space-y-2">
                   <Link href="/register">
-                    <button className="bg-amber-500 hover:bg-amber-400 transition-colors text-white rounded-xl px-6 py-3 font-semibold text-sm flex items-center gap-2">
+                    <button className="w-full bg-amber-500 hover:bg-amber-400 transition-colors text-white rounded-xl px-5 py-2.5 font-semibold text-sm flex items-center justify-center gap-2">
                       Зарегистрировать салон
-                      <ArrowRight size={16} />
+                      <ArrowRight size={15} />
                     </button>
                   </Link>
-                  <Link href="/dashboard" className="text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
-                    Войти в кабинет
+                  <Link href="/dashboard" className="block text-center text-gray-400 hover:text-gray-600 text-xs font-medium transition-colors py-1">
+                    Уже есть кабинет →
                   </Link>
                 </div>
               </div>
@@ -649,43 +739,83 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Owner CTA banner */}
-      <section className="bg-gradient-to-r from-amber-500 to-orange-500 py-14">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-white/20 border border-white/30 rounded-full px-4 py-1.5 mb-5 text-sm text-white">
-            <Zap size={13} />
-            <span>Бесплатная регистрация</span>
-          </div>
-          <h2 className="text-2xl md:text-4xl font-bold text-white mb-4">
-            Ваш салон — на Красиво
-          </h2>
-          <p className="text-white/80 mb-8 max-w-xl mx-auto text-sm leading-relaxed">
-            Присоединяйтесь к сотням успешных салонов. Онлайн-запись, управление мастерами, аналитика и промокоды — всё в одном месте.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/register">
-              <button className="bg-white text-amber-700 hover:bg-amber-50 transition-colors rounded-xl px-8 py-3.5 font-bold text-sm flex items-center justify-center gap-2">
-                Зарегистрировать бизнес
-                <ArrowRight size={16} />
-              </button>
-            </Link>
-            <Link href="/dashboard">
-              <button className="bg-white/15 hover:bg-white/25 border border-white/30 transition-colors text-white rounded-xl px-8 py-3.5 font-semibold text-sm">
-                Уже есть кабинет
-              </button>
-            </Link>
-          </div>
-          <div className="mt-10 grid grid-cols-3 gap-6 max-w-sm mx-auto text-white">
-            {[
-              { v: 'Бесплатно', l: 'регистрация' },
-              { v: '5 мин', l: 'настройка' },
-              { v: '0%', l: 'комиссия' },
-            ].map(({ v, l }) => (
-              <div key={l}>
-                <p className="text-2xl font-black">{v}</p>
-                <p className="text-white/60 text-xs">{l}</p>
+      {/* Dual CTA: Masters + Owners */}
+      <section className="py-10 px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Master CTA */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-700 via-purple-700 to-violet-800 p-8 md:p-10 text-white">
+            <div className="absolute top-0 right-0 w-56 h-56 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 bg-white/15 border border-white/20 rounded-full px-4 py-1.5 mb-5 text-sm">
+                <Sparkles size={13} />
+                <span>Для мастеров красоты</span>
               </div>
-            ))}
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">
+                Станьте мастером<br />на Красиво
+              </h2>
+              <p className="text-white/75 mb-6 text-sm leading-relaxed">
+                Создайте портфолио, установите свои цены и начните принимать онлайн-записи. Бесплатный старт — без вложений.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <Link href="/for-masters">
+                  <button className="bg-white text-violet-700 hover:bg-violet-50 transition-colors rounded-xl px-6 py-3 font-bold text-sm flex items-center gap-2">
+                    Узнать подробнее
+                    <ArrowRight size={15} />
+                  </button>
+                </Link>
+                <Link href="/register">
+                  <button className="bg-white/15 hover:bg-white/25 border border-white/25 transition-colors rounded-xl px-6 py-3 font-semibold text-sm">
+                    Зарегистрироваться
+                  </button>
+                </Link>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                {[{ v: 'Бесплатно', l: 'старт' }, { v: '24/7', l: 'запись' }, { v: '0%', l: 'комиссия' }].map(({ v, l }) => (
+                  <div key={l}>
+                    <p className="text-xl font-black">{v}</p>
+                    <p className="text-white/50 text-xs mt-0.5">{l}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Owner CTA */}
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-amber-600 p-8 md:p-10 text-white">
+            <div className="absolute top-0 right-0 w-56 h-56 bg-white/5 rounded-full -translate-y-1/3 translate-x-1/4" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-2 bg-white/20 border border-white/30 rounded-full px-4 py-1.5 mb-5 text-sm">
+                <Zap size={13} />
+                <span>Для владельцев салонов</span>
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-3">
+                Ваш салон — на Красиво
+              </h2>
+              <p className="text-white/80 mb-6 text-sm leading-relaxed">
+                Онлайн-запись, управление мастерами, аналитика, рассылки и промокоды — всё в одном кабинете.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                <Link href="/register">
+                  <button className="bg-white text-amber-700 hover:bg-amber-50 transition-colors rounded-xl px-6 py-3 font-bold text-sm flex items-center gap-2">
+                    Зарегистрировать бизнес
+                    <ArrowRight size={15} />
+                  </button>
+                </Link>
+                <Link href="/dashboard">
+                  <button className="bg-white/15 hover:bg-white/25 border border-white/30 transition-colors rounded-xl px-6 py-3 font-semibold text-sm">
+                    Уже есть кабинет
+                  </button>
+                </Link>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                {[{ v: 'Бесплатно', l: 'регистрация' }, { v: '5 мин', l: 'настройка' }, { v: '0%', l: 'комиссия' }].map(({ v, l }) => (
+                  <div key={l}>
+                    <p className="text-xl font-black">{v}</p>
+                    <p className="text-white/60 text-xs mt-0.5">{l}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

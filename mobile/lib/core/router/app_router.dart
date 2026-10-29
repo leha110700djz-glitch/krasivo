@@ -23,6 +23,8 @@ import '../../features/owner/screens/owner_masters_screen.dart';
 import '../../features/owner/screens/owner_services_screen.dart';
 import '../../features/owner/screens/manage_salon_screen.dart';
 import '../../features/profile/screens/loyalty_screen.dart';
+import '../../features/master/screens/master_profile_screen.dart';
+import '../../features/master/screens/master_earnings_screen.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_strings.dart';
 
@@ -198,6 +200,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/owner/services',
         builder: (_, __) => const OwnerServicesScreen(),
+      ),
+      // Master profile (client view) — /master/earnings must come before /master/:id
+      GoRoute(
+        path: '/master/earnings',
+        builder: (_, __) => const MasterEarningsScreen(),
+      ),
+      GoRoute(
+        path: '/master/:id',
+        builder: (_, state) => MasterProfileScreen(
+          masterId: int.parse(state.pathParameters['id']!),
+        ),
       ),
     ],
   );
